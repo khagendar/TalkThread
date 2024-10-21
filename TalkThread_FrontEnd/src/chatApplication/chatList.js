@@ -11,6 +11,7 @@ import axios from 'axios';
 import SearchChat from './Search';
 import MessageConversation from'../chatApplication/chat'
 import { format } from 'timeago.js';
+import './chatList.css';
 const ChatAccounts = ({ conversation, currentUser }) => {
   const [userDetails, setUserDetails] = useState([]); // Array to store user details
   const [isLoading, setIsLoading] = useState(true);
@@ -52,7 +53,7 @@ const ChatAccounts = ({ conversation, currentUser }) => {
       sx={{
         width: '95%',
         borderRadius: 2,
-        backgroundColor: '#fff',
+        // backgroundColor: '#fff',
         '&:hover': { backgroundColor: 'lightgray' },
         cursor: 'pointer',
       }}
@@ -61,15 +62,7 @@ const ChatAccounts = ({ conversation, currentUser }) => {
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Stack direction="row" spacing={2}>
           <Badge
-            overlap="circular"
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            variant="dot"
-            sx={{
-              '& .MuiBadge-badge': {
-                backgroundColor: '#44b700',
-                color: '#44b700',
-              },
-            }}
+            
           >
             <Avatar src={faker.image.avatar()} sx={{ cursor: 'pointer' }} />
           </Badge>
@@ -176,6 +169,7 @@ export default function ChatList() {
   const [currentChat, setCurrentChat] = useState(null);
 
   const { user } = useAuth();
+  console.log("user",user);
   const [open, setOpen] = useState(true);
 
   // Reset and re-open search chat
@@ -201,7 +195,8 @@ export default function ChatList() {
       const res = await axios.get(`http://localhost:5000/sign/conversation/${user._id}`);
       setConversation(res.data);
     } catch (error) {
-      console.error("Error fetching conversations:", error);
+      console.error("Error fetching conversations:", error.response || error.message);
+
     }
   };
 
@@ -212,12 +207,13 @@ export default function ChatList() {
   return (
     <>
       <Stack direction="row">
+        <Box height={'100vh'} sx={{borderRight:"1px solid black"}}>
         <Box
           sx={{
             height: '95vh',
             width: 320,
-            boxShadow: '2px 0px 1px rgba(0, 0, 0, 0.2), -2px 0px 1px rgba(0, 0, 0, 0.2)',
-            backgroundColor: '#F8FAFF',
+            // boxShadow: '2px 0px 1px rgba(0, 0, 0, 0.2), -2px 0px 1px rgba(0, 0, 0, 0.2)',
+            // backgroundColor: '#F8FAFF',
             position: 'relative',
             display: 'flex',
             flexDirection: 'column',
@@ -227,7 +223,7 @@ export default function ChatList() {
           {/* Header */}
           <Stack p={3}>
             <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Typography variant="h5" fontWeight={500} fontFamily="'Pacifico', cursive">
+              <Typography variant="h5" fontWeight={500} fontFamily="'Pacifico',cursive">
                 Chats
               </Typography>
               <IconButton onClick={handleNewChat}>
@@ -262,9 +258,9 @@ export default function ChatList() {
               <Typography variant="h6" sx={{ paddingBottom: '15px' }}>
                 Messages
               </Typography>
-              <IconButton sx={{ marginRight: "10px" }} onClick={handleOpenDialog}>
+              {/* <IconButton sx={{ marginRight: "10px" }} onClick={handleOpenDialog}>
                 <Users width={25} height={25} alt="Users" />
-              </IconButton>
+              </IconButton> */}
             </Stack>
 
             {conversation.map((c) => (
@@ -296,7 +292,7 @@ export default function ChatList() {
           />
           )}
         </Box>
-
+        </Box>
         {/* Display the Messages component when a chat is selected */}
         {currentChat && open && (
           <MessageConversation conversation={currentChat} open={open} CUser={user} fetchConversations={fetchConversations}/>  // Display the Messages component based on the currentChat

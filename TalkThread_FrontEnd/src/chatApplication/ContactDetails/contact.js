@@ -1,10 +1,48 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Box, IconButton, Stack, Typography } from '@mui/material';
 import close from '../images/close.png';
 import Details from './details';
-const Contact = ({ showInfo, setShowInfo }) => {
-  const [currentView, setCurrentView] = useState('details');
+import axios from 'axios'; // Ensure axios is imported
 
+const Contact = React.memo(({ showInfo, setShowInfo, isBlocked,setIsBlocked, receiver,CurrentUser,refreshConversation,conversation }) => {
+  const [currentView, setCurrentView] = useState('details');
+  const [receiverDetails, setReceiverDetails] = useState(null); // State to store receiver's details
+  const contactRef = useRef(null); // Ref to track the contact box
+
+  // Fetch receiver details when the receiver changes
+  useEffect(() => {
+    if (!receiver) return; // Do nothing if receiver is not provided
+
+    const fetchReceiverDetails = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/sign/user/${receiver}`);
+        setReceiverDetails(response.data); // Update state with receiver's details
+      } catch (error) {
+        console.error('Error fetching receiver details:', error);
+      }
+    };
+
+    fetchReceiverDetails();
+  }, [receiver]); // Only re-run this effect when `receiver` changes
+
+  // Close sidebar when clicking outside the component
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (contactRef.current && !contactRef.current.contains(event.target)) {
+        setShowInfo(false); // Close the sidebar if the click is outside
+      }
+    };
+
+    // Add event listener when the component is mounted
+    document.addEventListener('mousedown', handleClickOutside);
+
+    // Cleanup the event listener when the component is unmounted
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [setShowInfo]);
+
+  // If showInfo is false, don't render the Contact sidebar
   if (!showInfo) return null;
 
   const handleClick = (view) => {
@@ -13,6 +51,7 @@ const Contact = ({ showInfo, setShowInfo }) => {
 
   return (
     <Box
+      ref={contactRef} // Attach ref to the Contact component's box
       sx={{
         position: 'absolute',
         top: 35,
@@ -27,52 +66,48 @@ const Contact = ({ showInfo, setShowInfo }) => {
         overflow: 'auto',
       }}
     >
-      <Box display={'flex'} justifyContent={'flex-end'} marginBottom={"2px"}>
+      {/* Close Button */}
+      <Box display="flex" justifyContent="flex-end" marginBottom="2px">
         <img
           src={close}
-          alt='Close'
+          alt="Close"
           width={22}
           height={22}
           style={{ cursor: 'pointer' }}
-          onClick={() => setShowInfo(false)}
+          onClick={() => setShowInfo(false)} // Close the sidebar
         />
       </Box>
-      <Stack direction={'row'} width={"100%"} height={"65vh"}>
-        {/* Fixed-width Sidebar */}
-        <Box sx={{
-          width: "30%",
-          backgroundColor: "whitesmoke",
-          padding: 2,
-        }}>
-          <IconButton 
-            sx={{ 
-              width: '100%', 
-              borderRadius: '0px', 
+
+      {/* Sidebar Navigation and Content */}
+      <Stack direction="row" width="100%" height="65vh">
+        {/* Sidebar Navigation (Fixed-width) */}
+        <Box sx={{ width: '30%', backgroundColor: 'whitesmoke', padding: 2 }}>
+          <IconButton
+            sx={{
+              width: '100%',
+              borderRadius: '0px',
               justifyContent: 'flex-start',
               padding: 1,
               textAlign: 'left',
-            }} 
-            onClick={() => handleClick('details')}
+            }}
+            onClick={() => handleClick('details')} // Switch to 'details' view
           >
-            <Typography variant="body2" color={'black'}>
+            <Typography variant="body2" color="black">
               Details
             </Typography>
           </IconButton>
-          
-          
         </Box>
-        
+
         {/* Main Content Area */}
-        <Box sx={{
-          flexGrow: 1,
-          backgroundColor: "#f0f0f0",
-          padding: 2, // Added padding for better spacing
-        }}>
-          {currentView === 'details' && <Details />}
+        <Box sx={{ flexGrow: 1, backgroundColor: '#f0f0f0', padding: 2 }}>
+          {/* Render Details component if currentView is 'details' */}
+          {currentView === 'details' && (
+            <Details isBlocked={isBlocked} setIsBlocked={setIsBlocked} receiverDetails={receiverDetails} CurrentUser={CurrentUser} refreshConversation={refreshConversation} conversation={conversation} />
+          )}
         </Box>
       </Stack>
     </Box>
   );
-};
+});
 
 export { Contact };

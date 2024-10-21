@@ -11,7 +11,7 @@ import {
   Fab,
   Tooltip,
 } from '@mui/material';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState,useCallback } from 'react';
 import { faker } from '@faker-js/faker';
 import {
   VideoCamera,
@@ -95,314 +95,373 @@ const Action = [
   },
 ];
 
-const ChatInput = ({ setOpenPicker, newMessage, setNewMessage, handleSendMessage }) => {
-  const [Document, setDocument] = useState(false);
+const ChatInput = ({ setOpenPicker, newMessage, setNewMessage, handleSendMessage,receiverBlocked }) => {
+    const [Document, setDocument] = useState(false);
 
-  return (
-    <StyledInput
-      fullWidth
-      placeholder="Write a message"
-      variant="filled"
-      onChange={(e) => setNewMessage(e.target.value)}
-      value={newMessage}
-      InputProps={{
-        disableUnderline: true,
-        startAdornment: (
-          <Stack sx={{ width: 'max-content' }}>
-            <Stack
-              sx={{
-                position: 'relative',
-                bottom: 280,
-                display: Document ? 'inline-block' : 'none',
-              }}
-            >
-              {Action.map((el, index) => (
-                <Tooltip key={index} placement="right" title={el.title}>
-                  <Fab
-                    sx={{
-                      position: 'absolute',
-                      top: el.y,
-                      backgroundColor: el.color,
-                    }}
-                  >
-                    {el.icon}
-                  </Fab>
-                </Tooltip>
-              ))}
+    return (
+      <StyledInput
+        fullWidth
+        placeholder="Write a message"
+        variant="filled"
+        onChange={(e) => setNewMessage(e.target.value)}
+        value={newMessage}
+        InputProps={{
+          disableUnderline: true,
+          startAdornment: (
+            <Stack sx={{ width: 'max-content' }}>
+              <Stack
+                sx={{
+                  position: 'relative',
+                  bottom: 280,
+                  display: Document ? 'inline-block' : 'none',
+                }}
+              >
+                {Action.map((el, index) => (
+                  <Tooltip key={index} placement="right" title={el.title}>
+                    <Fab
+                      sx={{
+                        position: 'absolute',
+                        top: el.y,
+                        backgroundColor: el.color,
+                      }}
+                    >
+                      {el.icon}
+                    </Fab>
+                  </Tooltip>
+                ))}
+              </Stack>
+              <InputAdornment>
+                <IconButton onClick={() => setDocument((prev) => !prev)}>
+                  <LinkSimple color="black" />
+                </IconButton>
+              </InputAdornment>
             </Stack>
+          ),
+          endAdornment: (
             <InputAdornment>
-              <IconButton onClick={() => setDocument((prev) => !prev)}>
-                <LinkSimple color="black" />
+              <IconButton onClick={() => setOpenPicker((prev) => !prev)}>
+                <Smiley color="black" />
+              </IconButton>
+              {/* Disable the send button if `receiverBlocked` is true or no message is typed */}
+              <IconButton
+                onClick={() => handleSendMessage()}
+                disabled={!newMessage.trim()} // Add `receiverBlocked` condition here
+              >
+                <PaperPlaneTilt
+                  color={newMessage.trim() ? 'blue' : 'gray'}
+                />
               </IconButton>
             </InputAdornment>
-          </Stack>
-        ),
-        endAdornment: (
-          <InputAdornment>
-            <IconButton onClick={() => setOpenPicker((prev) => !prev)}>
-              <Smiley color="black" />
-            </IconButton>
-            <IconButton onClick={()=>handleSendMessage()} disabled={!newMessage.trim()}>
-              <PaperPlaneTilt color={newMessage.trim() ? 'blue' : 'gray'} />
-            </IconButton>
-          </InputAdornment>
-        ),
-      }}
-    />
-  );
-};
+          ),
+        }}
+      />
+    );
+}    
 
-export default function Conversation({ conversation, open, CUser,fetchConversations }) {
-  // Redux state management and local state initialization
-  const app = useSelector((state) => state.app);
-  const [openPicker, setOpenPicker] = useState(false);
-  const [showInfo, setShowInfo] = useState(false);
-  const [conversationMessages, setConversationMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
-  const dispatch = useDispatch();
-  const [user, setUser] = useState(null);
-  const socket = useRef();
-  const [arrivalMessage, setArrivalMessage] = useState(null);
-  const messagesEndRef = useRef(null);
-  const[receiver,setReceiver]=useState(null);
-  const { user: authUser } = useAuth(); // Assuming authentication hook is used to get the logged-in user
 
-  // Effect hook to initialize socket connection on mount and set up message listener
-  // 1. Initialize socket connection and set up message listener
-  useEffect(() => {
-    socket.current = io("ws://localhost:8900");
+export default function Conversation({ conversation, open, CUser, fetchConversations }) {
+    const [openPicker, setOpenPicker] = useState(false);
+    const [showInfo, setShowInfo] = useState(false);
+    const [conversationMessages, setConversationMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [user, setUser] = useState(null);
+    const [arrivalMessage, setArrivalMessage] = useState(null);
+    const messagesEndRef = useRef(null);
+    const [receiver, setReceiver] = useState(null);
+    const { user: authUser } = useAuth(); 
+    const [onlineUsers, setOnlineUsers] = useState([]);
+    const [isBlocked, setIsBlockedLocal] = useState(false);
+    const socket = useRef(null);
+    const [receiverBlocked,setReceiverBlocked]=useState(false);
+    // Initialize socket connection once when the app starts
+    useEffect(() => {
+        socket.current = io("ws://localhost:8900");
 
-    socket.current.on("getMessage", (message) => {
-      if (message.conversationId === conversation._id) {
-        setArrivalMessage(message); // Capture new incoming messages
+        // Cleanup the socket when the component unmounts
+        return () => {
+            socket.current.disconnect();
+        };
+    }, []);
+    // console.log("ConversationMembers:",conversation);
+        const getUsersData = async () => {
+          try {
+            
+            const friendId = conversation?.members.find((m) => m !== CUser?._id);
+            console.log(friendId);
+            const response = await axios.get(`http://localhost:5000/sign/user/${friendId}` ); 
+            const friendData = response.data;
+            console.log("frienddata",friendData);
+            // Check if the senderId is in the blockedUsers array
+            const isSenderBlocked = friendData.blockedUsers.includes(CUser._id);
+
+            if(isSenderBlocked)
+            {
+                setReceiverBlocked(true);
+                console.log("receiverBlocked",receiverBlocked);
+            }
+            else{
+                setReceiverBlocked(false);
+                console.log("receiverBlocked",receiverBlocked);
+            }
+           
+          } catch (error) {
+            console.error("Error fetching data:", error);
+          }
+        };
+    
+       
+
+    // Handle receiving messages
+    useEffect(() => {
+        if (socket.current) {
+            socket.current.on("getMessage", (message) => {
+                if (message.conversationId === conversation?._id) {
+                    setArrivalMessage(message);
+                }
+                fetchConversations();
+            });
+        }
+
+        return () => {
+            socket.current?.off("getMessage");
+        };
+    }, [conversation,fetchConversations]);
+
+    // Update conversation messages when a new message arrives
+    useEffect(() => {
+        if (arrivalMessage) {
+            setConversationMessages((prevMessages) => [...prevMessages, arrivalMessage]);
+        }
+    }, [arrivalMessage]);
+
+    // Fetch the user data of the conversation (other participant)
+    useEffect(() => {
+        const getUser = async () => {
+            if (!conversation) return;
+
+            try {
+                const friendId = conversation?.members.find((m) => m !== CUser?._id);
+                const res = await axios.get(`http://localhost:5000/sign/user/${friendId}`);
+                setReceiver(friendId);
+                setUser(res.data);
+            } catch (error) {
+                console.error("Error fetching user:", error);
+            }
+        };
+
+        getUser();
+    }, [conversation, CUser]);
+
+    // Add the current user to the socket's active user list
+    useEffect(() => {
+        if (CUser?._id) {
+            socket.current.emit("addUser", CUser._id);
+            socket.current.on("getUsers", (users) => {
+                setOnlineUsers(users.map((user) => user.userId));
+            });
+        }
+
+        return () => {
+            socket.current?.off("getUsers");
+        };
+    }, [CUser]);
+
+    // Handle sending messages
+    const handleSendMessage = async () => {
+      // Check if the user is blocked
+       await getUsersData();
+      if (receiverBlocked) {
+        alert('User is blocked'); // Show a toast notification
+        return; // Exit the function if the user is blocked
       }
-    });
-
-    return () => {
-      socket.current.disconnect(); // Cleanup on component unmount
-    };
-  }, [conversation]);
-  console.log("Conversations"+conversation);
-  // 2. Update conversation messages when a new message arrives
-  useEffect(() => {
-    if (arrivalMessage) {
-      setConversationMessages((prevMessages) => [...prevMessages, arrivalMessage]);
-    }
-  }, [arrivalMessage]);
-
-  // 3. Fetch conversation user data (the other person in the conversation)
-  useEffect(() => {
-    const getUser = async () => {
-      try {
-        const friendId = conversation?.members.find((m) => m !== CUser._id);
-        const res = await axios.get(`http://localhost:5000/sign/user/${friendId}`);
-        setReceiver(friendId);
-        setUser(res.data); // Set the user info of the conversation partner
-      } catch (error) {
-        console.error("Error fetching user:", error);
+  
+      if (newMessage.trim()) {
+          const tempMessage = {
+              conversationId: conversation._id,
+              sender: CUser._id,
+              text: newMessage,
+              type: 'msg',
+              subtype: 'TextMessage',
+          };
+  
+          setConversationMessages((prev) => [...prev, tempMessage]);
+  
+          // Emit the message via socket
+          socket.current.emit('sendMessage', {
+              ...tempMessage,
+              receiverId: receiver,
+          });
+  
+          try {
+              const res = await axios.post(
+                  'http://localhost:5000/sign/conversation/messages/',
+                  tempMessage
+              );
+  
+              // Replace the optimistic message with the server response
+              setConversationMessages((prev) =>
+                  prev.map((msg) => (msg === tempMessage ? res.data : msg))
+              );
+  
+              // Refresh the chat list
+              fetchConversations();
+  
+              // Clear input field
+              setNewMessage('');
+          } catch (error) {
+              console.error('Error sending message:', error);
+              setConversationMessages((prev) => prev.filter((msg) => msg !== tempMessage));
+          }
       }
-    };
-
-    if (conversation) {
-      getUser(); // Only fetch when conversation exists
-    }
-  }, [conversation, CUser]);
-
-  // 4. Add user to socket's active user list when CUser is available
-  useEffect(() => {
-    if (CUser?._id) {
-      socket.current.emit("addUser", CUser._id); // Send the current user ID to the socket server
-    }
-  }, [CUser]);
-
-  // 5. Handle sending messages (with optimistic UI update)
-  const handleSendMessage = async () => {
-    if (newMessage.trim()) {
-      const messageData = {
-        conversationId: conversation._id,
-        sender: CUser._id,
-        text: newMessage,
-        type: "msg",
-        subtype: "TextMessage",
-      };
-  
-      // Optimistically add the message to the UI
-      setConversationMessages((prev) => [...prev, messageData]);
-  
-      // Emit the message via socket
-      socket.current.emit("sendMessage", {
-        ...messageData,
-        receiverId: receiver,
-      });
-  
-      try {
-        // Send message to the backend to save it
-        const res = await axios.post(
-          "http://localhost:5000/sign/conversation/messages/",
-          messageData
-        );
-        
-        // Replace the optimistic message with the server response (with ID, etc.)
-        setConversationMessages((prev) =>
-          prev.map((msg) => (msg === messageData ? res.data : msg))
-        );
-        
-        // Immediately refresh the chat list
-        fetchConversations();
-  
-        // Clear input field after sending
-        setNewMessage(""); 
-        
-      } catch (error) {
-        console.error("Error sending message:", error);
-      }
-    }
   };
   
-  // Scroll to the bottom of the messages when conversationMessages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [conversationMessages]);
-  
-  // Refresh the conversation's messages from the server
-  const refreshMessages = async () => {
-  try {
-    const res = await axios.get(
-      `http://localhost:5000/sign/conversation/messages/${conversation._id}`
-    );
-    console.log("Messages fetched:", res.data); // Log to check the fetched messages
-    setConversationMessages(res.data);
-  } catch (error) {
-    console.error("Error fetching messages:", error);
-  }
-};
-  
-  // Fetch new messages from the server when the conversation changes
-  useEffect(() => {
-    if (conversation) {
-      refreshMessages(); // Fetch all messages when a new conversation is opened
-    }
-  }, [conversation]);
-  
-  return (
-    <Stack height="100%" maxHeight="100vh" sx={{ width: "100%" }}>
-      {open ? (
-        <>
-          {/* Header section showing user's avatar, name, and some controls */}
-          <Box
-            p={1}
-            sx={{
-              height: 60,
-              width: "100%",
-              backgroundColor: "#F8FAFF",
-              boxShadow: "0px 0px 5px rgba(0,0,0,0.25)",
-            }}
-          >
-            <Stack
-              alignItems="center"
-              direction="row"
-              justifyContent="space-between"
-              sx={{ width: "100%", height: "100%" }}
-            >
-              <Stack direction="row" spacing={2}>   
+    // Scroll to the bottom of the messages when they change
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [conversationMessages]);
 
-                <Box>
-                  {/* Displays user's avatar */}
-                  <Badge
-                    overlap="circular"
-                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                    variant="dot"
-                  >
-                    <Avatar alt="User Avatar" src={faker.image.avatar()} />
-                  </Badge>
-                </Box>
-                <Stack spacing={0.3}>
-                  {/* User's name and online status */}
-                  <Typography variant="subtitle2">{user?.name}</Typography>
-                  <Typography variant="caption">Online</Typography>
+    // Fetch block status when the conversation changes
+    useEffect(() => {
+        const checkIfBlocked = async () => {
+            if (receiver) {
+                try {
+                    const res = await axios.get(`http://localhost:5000/check/${receiver}/${CUser._id}`);
+                    console.log("Block status response:", res);
+                    const blockedStatus = res.data.isBlocked; // Assume the response returns an object with `isBlocked`
+                    setIsBlockedLocal(blockedStatus);
+                } catch (error) {
+                    console.error('Error checking block status:', error);
+                }
+            }
+        };
+
+        checkIfBlocked();
+    }, [receiver, CUser, conversation]);
+
+    // Fetch new messages when the conversation changes
+    useEffect(() => {
+        if (conversation) {
+            const refreshMessages = async () => {
+                try {
+                    const res = await axios.get(
+                        `http://localhost:5000/sign/conversation/messages/${conversation._id}`
+                    );
+                    setConversationMessages(res.data);
+                } catch (error) {
+                    console.error('Error fetching messages:', error);
+                }
+            };
+
+            refreshMessages();
+        }
+    }, [conversation]);
+
+    // Function to refresh conversation messages
+    const refreshConversation = async () => {
+        if (conversation) {
+            try {
+                const res = await axios.get(
+                    `http://localhost:5000/sign/conversation/messages/${conversation._id}`
+                );
+                setConversationMessages(res.data);
+            } catch (error) {
+                console.error('Error refreshing conversation:', error);
+            }
+        }
+    };
+
+    return (
+        <Stack height="100%" maxHeight="100vh" sx={{ width: '100%' }}>
+            {open ? (
+                <>
+                    {/* Header section */}
+                    <Box p={1} sx={{ height: 60, width: '100%', borderBottom: '1px solid black' }}>
+                        <Stack alignItems="center" direction="row" justifyContent="space-between" sx={{ width: '100%', height: '100%' }}>
+                            <Stack direction="row" spacing={2}>
+                                <Box>
+                                    {/* Display user's avatar */}
+                                    <Badge
+                                        overlap="circular"
+                                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                        variant={onlineUsers.includes(user?._id) ? 'dot' : 'undefined'}
+                                        sx={{ '& .MuiBadge-badge': { backgroundColor: '#44b700', color: '#44b700' } }}
+                                    >
+                                        <Avatar alt="User Avatar" src={user?.profile || ''} />
+                                    </Badge>
+                                </Box>
+                                <Stack spacing={0.3}>
+                                    {/* User's name and online status */}
+                                    <Typography variant="subtitle2">{user?.name}</Typography>
+                                    {onlineUsers.includes(user?._id) ? 'Online' : 'Offline'}
+                                </Stack>
+                            </Stack>
+                            <Stack direction="row" alignItems="center" spacing={3} marginRight="40px">
+                                {/* Call and info buttons */}
+                                <IconButton>
+                                    <Phone />
+                                </IconButton>
+                                <IconButton onClick={() => setShowInfo((prev) => !prev)}>
+                                    <Info />
+                                </IconButton>
+                            </Stack>
+                        </Stack>
+                        {/* Pass refreshConversation to Contact component */}
+                        <Contact 
+                            showInfo={showInfo} 
+                            setShowInfo={setShowInfo} 
+                            isBlocked={isBlocked} 
+                            setIsBlocked={setIsBlockedLocal} 
+                            receiver={receiver} 
+                            CurrentUser={CUser} 
+                            refreshConversation={refreshConversation} 
+                            conversation={conversation}
+                        />
+                    </Box>
+
+                    {/* Messages section */}
+                    <Box sx={{ width: '100%', height: 'calc(100vh - 60px)', backgroundColor: '#F0F4FA', overflowY: 'scroll' }}>
+                        {conversationMessages.map((m) => (
+                            <div key={m._id}>
+                                <Messages message={m} own={m.sender === CUser._id} />
+                            </div>
+                        ))}
+                        <div ref={messagesEndRef} />
+                    </Box>
+
+                    {/* Input section */}
+                    {!isBlocked && (
+                        <Box sx={{ height: 60, width: '100%' }} p={2}>
+                            <Stack direction="row" alignItems="center" spacing={3}>
+                                <Box width="100%">
+                                    <ChatInput
+                                        newMessage={newMessage}
+                                        setNewMessage={setNewMessage}
+                                        handleSendMessage={handleSendMessage}
+                                        setOpenPicker={setOpenPicker}
+                                        receiverBlocked={receiverBlocked}
+                                    />
+                                    {openPicker && (
+                                        <Box sx={{ display: 'inline', zIndex: 10, position: 'fixed', bottom: 81, right: 100 }}>
+                                            <Picker onEmojiSelect={(emoji) => setNewMessage((prev) => prev + emoji.native)} />
+                                        </Box>
+                                    )}
+                                </Box>
+                            </Stack>
+                        </Box>
+                    )}
+                    <Stack direction={'row'} justifyContent={'center'}>
+                        <Typography variant="body2">
+                            {isBlocked ? "User is blocked" : ""}
+                        </Typography>
+                    </Stack>
+                </>
+            ) : (
+                <Stack justifyContent="center" alignItems="center" height="100%">
+                    <Typography variant="h6" color="textSecondary">
+                        Start Conversation
+                    </Typography>
                 </Stack>
-              </Stack>
-              <Stack direction="row" alignItems="center" spacing={3}   
- marginRight={"40px"}>
-                {/* Call and info buttons */}
-                <IconButton>
-                  <Phone />
-                </IconButton>
-                <IconButton onClick={() => setShowInfo((prev) => !prev)}>
-                  <Info />
-                </IconButton>
-              </Stack>
-            </Stack>
-            {showInfo && <Contact showInfo={showInfo} setShowInfo={setShowInfo} />}
-          </Box>
-
-          {/* Message display section */}
-          <Box
-            sx={{
-              width: "100%",
-              height: "calc(100vh - 60px)",
-              backgroundColor: "#F0F4FA",
-              overflowY: "scroll",
-            }}
-          >
-            {/* Renders all messages in the conversation */}
-            {conversationMessages.map((m) => (
-              <div key={m._id}>
-                <Messages message={m} own={m.sender === user?._id} />
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </Box>
-
-          {/* Input section for sending a message */}
-          <Box
-            sx={{
-              height: 60,
-              width: "100%",
-              backgroundColor: "#F8FAFF",
-              boxShadow: "0px 0px 5px rgba(0,0,0,0.25)",
-            }}
-            p={2}
-          >
-            <Stack direction="row" alignItems="center" spacing={3}>
-              <Box width="100%">
-                {/* Chat input component */}
-                <ChatInput
-                  newMessage={newMessage}
-                  setNewMessage={setNewMessage}
-                  handleSendMessage={handleSendMessage}
-                  setOpenPicker={setOpenPicker}
-                />
-                {/* Emoji picker that appears when openPicker is true */}
-                {openPicker && (
-                  <Box
-                    sx={{
-                      display: "inline",
-                      zIndex: 10,
-                      position: "fixed",
-                      bottom: 81,
-                      right: 100,
-                    }}
-                  >
-                    <Picker
-                      data={data}
-                      onEmojiSelect={(emoji) =>
-                        setNewMessage((prev) => prev + emoji.native)
-                      }
-                    />
-                  </Box>
-                )}
-              </Box>
-            </Stack>
-          </Box>
-        </>
-      ) : (
-        <Stack justifyContent="center" alignItems="center" height="100%">
-          <Typography variant="h6" color="textSecondary">
-            Start Conversation
-          </Typography>
+            )}
         </Stack>
-      )}
-    </Stack>
-  );
+    );
 }

@@ -116,7 +116,7 @@ export function TextMessage({ ele, own }) {
     return (
       <Stack
         direction={"row"}
-        justifyContent={own ?  "start":"end"}
+        justifyContent={own ? "end" :"start"}
         spacing={2}
         alignItems={"center"}
       >
@@ -132,7 +132,7 @@ export function TextMessage({ ele, own }) {
               paddingLeft={2}
               paddingRight={2}
               sx={{
-                backgroundColor: own ? "whitesmoke":"skyblue" ,
+                backgroundColor: own ?"skyblue": "whitesmoke" ,
                 borderRadius: "10px",
                 width: "auto", // Width adjusts dynamically based on content
                 maxWidth: "400px", // Limits the width to prevent overflow

@@ -4,29 +4,30 @@ const auth = require('./auth'); // Assuming you have a file for authentication u
 
 class LoginController {
   // Sign Up
-  async signup(req, res) {
+  async signup (req, res)  {
     const { name, email, password } = req.body;
     try {
-      // Check if user already exists
-      const existingUser = await model.findOne({ email });
-      if (existingUser) {
-        return res.status(400).json({ message: 'User already exists' });
-      }
+        // Check if user already exists
+        const existingUser = await model.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'User already exists' });
+        }
 
-      // Hash the password
-      const hashedPassword = await bcrypt.hash(password, 10);
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Create a new user
-      const newUser = await model.create({ name, email, password: hashedPassword, role: "user" });
+        // Create a new user
+        const newUser = new model({ name, email, password: hashedPassword, role: "user" });
+        await newUser.save();
 
-      // Generate JWT token
-      const token = auth.token(newUser);
-      
-      // Send response
-      res.status(201).json({ message: 'User created successfully', user: newUser, token });
-    } catch (error) {
-      console.error('Error during sign-up:', error.message);
-      res.status(500).json({ message: 'Internal Server Error' });
+        // Generate a token
+        const token = auth.token(newUser); // Correct variable
+
+        // Send response
+        res.status(200).json({ message: 'Signup successful', user: newUser, token });
+    } catch (err) {
+        console.error('Signup error:', err.message);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
   }
 
@@ -48,11 +49,38 @@ class LoginController {
 
       // Generate JWT token
       const token = auth.token(user);
-      
+
       // Send response
       res.status(200).json({ message: 'Login successful', user, token });
     } catch (error) {
       console.error('Error during sign-in:', error.message);
+      res.status(500).json({ message: 'Internal Server Error' });
+    }
+  }
+
+  // forgot password
+  async forgotPassword(req, res) {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: 'Email and new password are required' });
+    }
+
+    try {
+      const user = await model.findOne({ email });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // You may want to validate the newPassword for strength/security
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      user.password = hashedPassword;
+      await user.save();
+
+      res.status(200).json({ message: 'Password updated successfully' });
+    } catch (error) {
+      console.error('Error during password reset:', error.message);
       res.status(500).json({ message: 'Internal Server Error' });
     }
   }

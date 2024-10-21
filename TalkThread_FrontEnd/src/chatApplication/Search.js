@@ -5,9 +5,10 @@ import { Box, Stack, Typography, Avatar } from '@mui/material';
 import close from '../chatApplication/images/close.png'; // Ensure the path is correct
 
 // Chat Account Component: Displays user details
-const ChatAccounts = ({ user }) => {
+const ChatAccounts = ({ user, onClick }) => {
   return (
     <Box
+      onClick={onClick}
       sx={{
         width: '95%',
         borderRadius: 2,
@@ -33,32 +34,47 @@ const ChatAccounts = ({ user }) => {
 
 ChatAccounts.propTypes = {
   user: PropTypes.object.isRequired,
+  onClick: PropTypes.func.isRequired,
 };
 
-// Function to add or retrieve a chat between sender and receiver
-const addNewChat = async (senderId, receiverId) => {
+// Fetch or create a new chat between sender and receiver
+const fetchOrCreateChat = async (senderId, receiverId) => {
   try {
-    console.log(`Creating conversation between ${senderId} and ${receiverId}`);
-
-    // Create or get a conversation
-    const res = await axios.post("http://localhost:5000/sign/conversation", {
-      senderId,
-      receiverId,
+    // First, try to get the existing conversation
+    const res = await axios.get(`http://localhost:5000/sign/conversation`, {
+      params: {
+        senderId,
+        receiverId,
+      },
     });
 
-    console.log('Conversation created or retrieved:', res.data);
+    console.log("res", res);
 
-    // Check if res.data is an array or an object
-    const conversation = Array.isArray(res.data) ? res.data : [res.data];
+    if (res.data) {
+      // Conversation exists, update the 'updatedAt' field by using the conversation ID
+      const updatedConversation = await axios.put(
+        `http://localhost:5000/sign/conversation/`, // Include the conversation ID in the URL
+        {
+            conversationId: res.data._id
+           
+        }
+      );
 
-    // Sort conversations if it's an array
-    const sortedConversations = conversation.sort((a, b) => {
-      return new Date(b.updatedAt) - new Date(a.updatedAt);
-    });
-
-    console.log( sortedConversations); // Return the sorted list
+      console.log("updated", updatedConversation.data); // Log the updated conversation
+      return updatedConversation.data; 
+    }
   } catch (error) {
-    console.error('Error creating or retrieving conversation:', error);
+    if (error.response && error.response.status === 404) {
+      // If conversation doesn't exist, create a new one
+      const newConversation = await axios.post(`http://localhost:5000/sign/conversation`, {
+        senderId,
+        receiverId,
+      });
+
+      return newConversation.data; // Return the new conversation
+    } else {
+      console.error('Error fetching or creating conversation:', error);
+    }
   }
 };
 
@@ -101,15 +117,16 @@ const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
   // Handle clicking on a user to start a chat
   const handleChatClick = async (receiverId) => {
     try {
-      const conversation = await addNewChat(CUser._id, receiverId);
+      const conversation = await fetchOrCreateChat(CUser._id, receiverId);
       
       // Ensure the conversation is passed correctly
-      onSelectChat(conversation); // Just pass the conversation directly
+      onSelectChat(conversation); // Pass the conversation directly
       handleCloseSearch(); // Close the search component
     } catch (error) {
       console.error('Error initiating chat:', error);
     }
   };
+
   // Reset the component state and close the search dialog
   const handleCloseSearch = () => {
     setInput("");            // Reset the input field
@@ -204,7 +221,7 @@ const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
 SearchAndChat.propTypes = {
   handleClose: PropTypes.func.isRequired,
   CUser: PropTypes.object.isRequired,
-  setConversations: PropTypes.func.isRequired,  // Pass this function from parent to refresh conversations
+  onSelectChat: PropTypes.func.isRequired,  // To handle chat selection
 };
 
 export default SearchAndChat;

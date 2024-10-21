@@ -3,6 +3,7 @@ import { Box, Stack } from '@mui/material';
 import Conversation from './conversation/Conversation';
 
 export default function Chat({ conversation, open,CUser,fetchConversations}) {
+  
     console.log(conversation);
   return (
     <Stack>

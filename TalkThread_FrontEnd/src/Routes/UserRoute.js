@@ -1,15 +1,15 @@
-import {Outlet,Navigate} from 'react-router-dom';
+    import {Outlet,Navigate} from 'react-router-dom';
 
-const UserRoutes = () =>{
-    const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
+    const UserRoutes = () =>{
+        const token = localStorage.getItem("token");
+        const role = localStorage.getItem("role");
 
-    if(token && role==="user"){
-        return <Outlet/>;
+        if(token && role==="user"){
+            return <Outlet/>;
+        }
+        else{
+            return <Navigate to="/" replace={true}/>
+        }
     }
-    else{
-        return <Navigate to="/" replace={true}/>
-    }
-}
 
-export default UserRoutes;
+    export default UserRoutes;

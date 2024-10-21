@@ -7,11 +7,16 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* display: flex;
-  justify-content: center; */
   align-items: center;
   height: 100vh;
 }
+
+.heading {
+  font-family: 'Pacifico', cursive; /* Set font to Pacifico */
+  text-align: center; /* Optional: Center the text */
+  font-size: 2rem; /* Optional: Adjust font size */
+}
+
 
 .login-page h1 {
   color: white;
@@ -29,18 +34,18 @@ body {
 }
 
 
-button[type="submit"] {
+.sub button[type="submit"] {
   margin-top: 20px;
   height: 30px;
-  font-size: 17px;
+  font-size: 20px;
   border-radius: 20px;
-  padding-top: 15px;
-  padding-bottom: 32px;
+  padding-top: 5px;
+  padding-bottom: 38px;
   width: 150px;
   cursor: pointer;
 }
 
-button[type="submit"]:hover {
+.sub button[type="submit"]:hover {
   background-color: rgb(200, 200, 243);
   color: black;
 }
@@ -112,6 +117,7 @@ h1 {
 
 .inpname {
   overflow: hidden;
+  width: 300px;
 }
 
 .underline {
@@ -208,7 +214,7 @@ input[type="checkbox"] {
 .icon {
   width: 20px;
   height: 20px;
-  margin-bottom: 10px;
+  margin-bottom: 2px;
   cursor: pointer;
 }
 
@@ -227,19 +233,22 @@ input[type="checkbox"] {
 .check-box label {
   color: black;
   font-weight: bold;
+  margin-top: 10px;
   margin-bottom: 10px;
 }
 
 .check-box {
   display: flex;
-  gap: 4px;
+  gap: 5px;
   align-items: center;
 }
 
 a {
   color: blue;
 }
-
+.name h1{
+  font-size: 1.7rem;
+}
 /* Responsive adjustments */
 @media screen and (max-width: 480px) {
   .photo {

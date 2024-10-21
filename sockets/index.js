@@ -33,6 +33,11 @@ const getUser = (userId) => {
     return users.find((user) => user.userId === userId);
 };
 
+// Emit user status update to all clients
+const emitUserStatus = () => {
+    io.emit("getUsers", users);
+};
+
 // Event listener for new connections
 io.on('connection', (socket) => {
     console.log("A user connected:", socket.id);
@@ -40,32 +45,41 @@ io.on('connection', (socket) => {
     // Add user to the users array when they join
     socket.on("addUser", (userId) => {
         addUser(userId, socket.id);
-        io.emit("getUsers", users); // Send the updated users list to all clients
+        emitUserStatus(); 
     });
 
     // Listen for 'sendMessage' and emit the message to the receiver
     socket.on("sendMessage", ({ conversationId, sender, text, receiverId, type, subtype }) => {
         const message = { conversationId, sender, text, type, subtype };
-
-        // Get receiver's socket
+    
+        // Find receiver by ID
         const receiver = getUser(receiverId);
-        console.log("receiverId", receiver);
-
-        // Check if receiver exists and is connected
+        console.log("receiverId", receiverId, "receiverSocketId", receiver?.socketId);
+    
         if (receiver) {
-            io.to(receiver.socketId).emit("getMessage", message); // Send message to the receiver
+            io.to(receiver.socketId).emit("getMessage", message);
         } else {
             console.log("Receiver not connected");
         }
-
-        // Optionally, remove this section if you don't want to send the message back to the sender
-        // io.to(socket.id).emit("getMessage", message); 
     });
 
-    // Event listener for disconnects
+    // Handle logout event (Don't disconnect the socket)
+    socket.on("logout", () => {
+        console.log("User logged out:", socket.id);
+
+        // Remove the user from the users array
+        removeUser(socket.id);
+
+        // Emit updated user status to all clients
+        emitUserStatus();
+
+        // You don't need to call socket.disconnect() here
+    });
+
+    // Handle the disconnect event when it happens
     socket.on("disconnect", () => {
         console.log("A user disconnected:", socket.id);
-        removeUser(socket.id); // Remove the disconnected user
-        io.emit("getUsers", users); // Send updated user list to all clients
+        removeUser(socket.id);
+        emitUserStatus(); // Update the users list after disconnection
     });
 });

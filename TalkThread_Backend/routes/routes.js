@@ -4,6 +4,7 @@ const LoginController = require('../controllers/user');
 const ConversationController = require('../controllers/conversation'); 
 const MessageController=require('../controllers/message');
 const userController =require('../controllers/userController');
+const CreateUserProfile=require('../controllers/CreateProfile');
 // const message = require('../controllers/message'); 
 // Route for user signup
 router.post('/signup', LoginController.signup);
@@ -18,4 +19,7 @@ router.delete('/conversation/:conversationId/:userId', ConversationController.de
 router.get('/user/:id', userController.getUserById);
 router.get('/Search',userController.getAllUsers);
 // router.post('/message',Conversation.message );
+router.get('/conversation',ConversationController.ConversationDetails);
+router.put('/conversation', ConversationController.updateConversation);
+router.put('/forgotPassword', LoginController.forgotPassword);
 module.exports = router;
