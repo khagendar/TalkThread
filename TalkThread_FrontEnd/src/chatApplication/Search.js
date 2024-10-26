@@ -10,7 +10,7 @@ const ChatAccounts = ({ user, onClick }) => {
     <Box
       onClick={onClick}
       sx={{
-        width: '95%',
+        width: '100%',
         borderRadius: 2,
         backgroundColor: '#fff',
         '&:hover': { backgroundColor: 'lightgray' },
@@ -117,6 +117,10 @@ const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
   // Handle clicking on a user to start a chat
   const handleChatClick = async (receiverId) => {
     try {
+      if (receiverId === CUser._id) {
+        alert('Cannot start a conversation with yourself.');
+        return; // Exit the function without doing anything
+      }
       const conversation = await fetchOrCreateChat(CUser._id, receiverId);
       
       // Ensure the conversation is passed correctly
@@ -152,6 +156,7 @@ const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
       }}
     >
       <div
+      className='newChat'
         style={{
           padding: "10px",
           display: "flex",
@@ -159,7 +164,9 @@ const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
           alignItems: "center",
         }}
       >
-        <h3>New Chat</h3>
+        
+        <Typography variant="h6">New Chat</Typography>
+
         <img
           src={close}
           alt="close"
@@ -175,7 +182,7 @@ const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
         onChange={handleInputChange}
         placeholder="Search Users..."
         style={{
-          width: "calc(100% - 20px)",
+          width: "100%",
           padding: "10px",
           borderRadius: "4px",
           border: "1px solid #ddd",
@@ -189,7 +196,7 @@ const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
             overflowY: "auto",
             border: "1px solid #ddd",
             borderRadius: "4px",
-            margin: "0 10px",
+            
           }}
         >
           {filteredResults.length > 0 ? (

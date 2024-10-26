@@ -22,7 +22,6 @@ const Chat = () => {
   const auth = useAuth();
   const navigate = useNavigate();
   const socket = useRef();
-
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -47,8 +46,9 @@ const Chat = () => {
       setAnchorEl(null); // Close the menu if another button is clicked
     }
 
-    if (button === 'group') {
-      setOpenModal(true); // Open the modal when the group button is clicked
+    if (button === 'home') {
+      // setOpenModal(true); // Open the modal when the group button is clicked
+      navigate('/dashboard');
     }
   };
 
@@ -70,7 +70,7 @@ const Chat = () => {
         p={2}
         component="section"
         sx={{
-          height: '95vh',
+          height: '100vh',
           display: 'flex',
           backgroundColor: 'white',
           justifyContent: 'space-between',
@@ -79,12 +79,12 @@ const Chat = () => {
       >
         <Box sx={{ width: 40, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <Stack direction="column" alignItems="center" width="100%" spacing={3}>
-            <IconButton aria-label="logo" size="large">
+            <IconButton aria-label="logo" size="large" onClick={()=>{navigate('/dashboard')}}>
               <img src={logo} alt="logo" style={{ width: 30, height: 30, objectFit: 'contain' }} />
             </IconButton>
 
             <Stack direction="column" alignItems="center" width="max-content">
-              <Divider sx={{ width: '100%', my: 2 }} />
+              <Divider sx={{ width: '100%', my: 1 }} />
 
               <IconButton
                 aria-label="home"
@@ -99,7 +99,7 @@ const Chat = () => {
               </IconButton>
               <Divider sx={{ width: '100%', my: 1 }} />
 
-              <IconButton
+              {/* <IconButton
                 aria-label="group"
                 size="large"
                 onClick={(event) => handleButtonClick('group', event)}
@@ -109,7 +109,7 @@ const Chat = () => {
                 }}
               >
                 <img src={group} alt="group" style={{ width: 30, height: 30, objectFit: 'contain' }} />
-              </IconButton>
+              </IconButton> */}
             </Stack>
           </Stack>
 

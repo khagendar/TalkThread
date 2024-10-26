@@ -94,7 +94,7 @@ export default function Login({ action }) {
       marginBottom={7}
       className='heading'
     >
-      TalkThread !
+      TalkThread 
     </Typography>
     {/* <Box textAlign="center" marginBottom={2}>
       <Typography variant="h5" gutterBottom>

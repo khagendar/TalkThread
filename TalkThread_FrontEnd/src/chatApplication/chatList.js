@@ -51,7 +51,7 @@ const ChatAccounts = ({ conversation, currentUser }) => {
   return (
     <Box
       sx={{
-        width: '95%',
+        width: '100%',
         borderRadius: 2,
         // backgroundColor: '#fff',
         '&:hover': { backgroundColor: 'lightgray' },
@@ -273,6 +273,7 @@ export default function ChatList() {
                 sx={{
                   backgroundColor: currentChat?._id === c._id ? '#E8F5FE' : 'transparent',  // Highlight the active chat
                   cursor: 'pointer',
+                  borderRadius:'5px'
                 }}
               >
                 <ChatAccounts conversation={c} currentUser={user} />

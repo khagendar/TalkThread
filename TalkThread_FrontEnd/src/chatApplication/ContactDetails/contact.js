@@ -57,7 +57,7 @@ const Contact = React.memo(({ showInfo, setShowInfo, isBlocked,setIsBlocked, rec
         top: 35,
         left: 480,
         width: '25vw',
-        height: '70vh',
+        height: '75vh',
         padding: 2,
         backgroundColor: 'white',
         boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.1)',
@@ -67,7 +67,7 @@ const Contact = React.memo(({ showInfo, setShowInfo, isBlocked,setIsBlocked, rec
       }}
     >
       {/* Close Button */}
-      <Box display="flex" justifyContent="flex-end" marginBottom="2px">
+      <Box display="flex" justifyContent="flex-end" marginBottom="2px" position={'sticky'}>
         <img
           src={close}
           alt="Close"

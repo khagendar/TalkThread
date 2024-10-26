@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Stack, TextField, Button, Avatar, Typography, Snackbar, Alert } from '@mui/material';
+import { Stack, TextField, Button, Avatar, Typography, Snackbar, Alert,Box } from '@mui/material';
 import defaultImage from './defaultImage.png';
 import axios from 'axios'; 
 import { useAuth } from '../Routes/AuthContex';
@@ -88,6 +88,9 @@ export default function CreateProfile() {
   }
 
   return (
+    <Stack justifyContent="center" alignItems="center" height="100vh"> {/* Center the layout */}
+     
+    <Box boxShadow={3}  width={400} height={500} display="flex" flexDirection="column"  sx={{ borderRadius: 2 }}>
     <form onSubmit={handleSubmit}>
       <Stack spacing={2} sx={{ width: '300px', margin: '0 auto', paddingTop: '50px' }}>
         <Typography variant="h5" align="center">Create Profile</Typography>
@@ -134,5 +137,7 @@ export default function CreateProfile() {
         </Snackbar>
       </Stack>
     </form>
+    </Box>
+    </Stack>
   );
 }

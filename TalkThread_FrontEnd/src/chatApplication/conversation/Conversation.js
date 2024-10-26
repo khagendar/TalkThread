@@ -80,28 +80,22 @@ const StyledBadge = styled(Badge)(({ theme }) => ({
   },
 }));
 
-const Action = [
-  {
-    color: '#4da5fe',
-    icon: <Image size={24} />,
-    y: 102,
-    title: '#photo/videos',
-  },
-  {
-    color: '#4da5fe',
-    icon: <Sticker size={24} />,
-    y: 172,
-    title: 'Stickers',
-  },
-];
+
 
 const ChatInput = ({ setOpenPicker, newMessage, setNewMessage, handleSendMessage,receiverBlocked }) => {
-    const [Document, setDocument] = useState(false);
-
+    const [selectedImage, setSelectedImage] = useState(null);
+    const handleImageUpload = (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        setSelectedImage(file);
+        // You can handle the file (e.g., send it, preview it, etc.)
+        console.log('Selected image:', file);
+      }
+    };
     return (
       <StyledInput
         fullWidth
-        placeholder="Write a message"
+        placeholder="Write a message..."
         variant="filled"
         onChange={(e) => setNewMessage(e.target.value)}
         value={newMessage}
@@ -109,30 +103,18 @@ const ChatInput = ({ setOpenPicker, newMessage, setNewMessage, handleSendMessage
           disableUnderline: true,
           startAdornment: (
             <Stack sx={{ width: 'max-content' }}>
-              <Stack
-                sx={{
-                  position: 'relative',
-                  bottom: 280,
-                  display: Document ? 'inline-block' : 'none',
-                }}
-              >
-                {Action.map((el, index) => (
-                  <Tooltip key={index} placement="right" title={el.title}>
-                    <Fab
-                      sx={{
-                        position: 'absolute',
-                        top: el.y,
-                        backgroundColor: el.color,
-                      }}
-                    >
-                      {el.icon}
-                    </Fab>
-                  </Tooltip>
-                ))}
-              </Stack>
+              
               <InputAdornment>
-                <IconButton onClick={() => setDocument((prev) => !prev)}>
-                  <LinkSimple color="black" />
+                {/* Image upload button */}
+                <IconButton component="label">
+                  <Image color="black" />
+                  {/* Hidden file input */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={handleImageUpload}
+                  />
                 </IconButton>
               </InputAdornment>
             </Stack>
@@ -145,11 +127,9 @@ const ChatInput = ({ setOpenPicker, newMessage, setNewMessage, handleSendMessage
               {/* Disable the send button if `receiverBlocked` is true or no message is typed */}
               <IconButton
                 onClick={() => handleSendMessage()}
-                disabled={!newMessage.trim()} // Add `receiverBlocked` condition here
+                disabled={!newMessage.trim() || receiverBlocked}
               >
-                <PaperPlaneTilt
-                  color={newMessage.trim() ? 'blue' : 'gray'}
-                />
+                <PaperPlaneTilt color={newMessage.trim() ? 'blue' : 'gray'} />
               </IconButton>
             </InputAdornment>
           ),
@@ -315,10 +295,10 @@ export default function Conversation({ conversation, open, CUser, fetchConversat
       }
   };
   
-    // Scroll to the bottom of the messages when they change
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [conversationMessages]);
+    // // Scroll to the bottom of the messages when they change
+    // useEffect(() => {
+    //     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // }, [conversationMessages]);
 
     // Fetch block status when the conversation changes
     useEffect(() => {
@@ -339,22 +319,32 @@ export default function Conversation({ conversation, open, CUser, fetchConversat
     }, [receiver, CUser, conversation]);
 
     // Fetch new messages when the conversation changes
-    useEffect(() => {
-        if (conversation) {
-            const refreshMessages = async () => {
-                try {
-                    const res = await axios.get(
-                        `http://localhost:5000/sign/conversation/messages/${conversation._id}`
-                    );
-                    setConversationMessages(res.data);
-                } catch (error) {
-                    console.error('Error fetching messages:', error);
-                }
-            };
+   // Inside your Conversation component:
+   useEffect(() => {
+    if (conversationMessages.length > 0) {
+        // Scroll to the bottom of the message list when a new message is added
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+}, [conversationMessages]); 
 
-            refreshMessages();
-        }
-    }, [conversation]);
+// Ensure that fetching the conversation only triggers when the conversation ID changes
+useEffect(() => {
+  if (conversation) {
+      const refreshMessages = async () => {
+          try {
+              const res = await axios.get(
+                  `http://localhost:5000/sign/conversation/messages/${conversation._id}`
+              );
+              setConversationMessages(res.data);
+          } catch (error) {
+              console.error('Error fetching messages:', error);
+          }
+      };
+
+      refreshMessages();
+  }
+}, [conversation?._id]);  // Dependency on conversation._id instead of the whole conversation object
+
 
     // Function to refresh conversation messages
     const refreshConversation = async () => {
@@ -375,7 +365,7 @@ export default function Conversation({ conversation, open, CUser, fetchConversat
             {open ? (
                 <>
                     {/* Header section */}
-                    <Box p={1} sx={{ height: 60, width: '100%', borderBottom: '1px solid black' }}>
+                    <Box p={1} sx={{ height: 70, width: '100%', borderBottom: '1px solid black' }}>
                         <Stack alignItems="center" direction="row" justifyContent="space-between" sx={{ width: '100%', height: '100%' }}>
                             <Stack direction="row" spacing={2}>
                                 <Box>
@@ -419,7 +409,7 @@ export default function Conversation({ conversation, open, CUser, fetchConversat
                     </Box>
 
                     {/* Messages section */}
-                    <Box sx={{ width: '100%', height: 'calc(100vh - 60px)', backgroundColor: '#F0F4FA', overflowY: 'scroll' }}>
+                    <Box sx={{ width: '100%', height: 'calc(100vh - 70px)', backgroundColor: '#F0F4FA', overflowY: 'scroll' }}>
                         {conversationMessages.map((m) => (
                             <div key={m._id}>
                                 <Messages message={m} own={m.sender === CUser._id} />
@@ -430,7 +420,7 @@ export default function Conversation({ conversation, open, CUser, fetchConversat
 
                     {/* Input section */}
                     {!isBlocked && (
-                        <Box sx={{ height: 60, width: '100%' }} p={2}>
+                        <Box sx={{ height: 70, width: '100%' }} p={1}>
                             <Stack direction="row" alignItems="center" spacing={3}>
                                 <Box width="100%">
                                     <ChatInput
