@@ -27,9 +27,9 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: true
     },
-    profile: {
-      type: String, 
-      default: null 
+    image: {
+      data: { type: Buffer },  // Make 'data' explicitly typed
+      contentType: { type: String } // Make 'contentType' explicitly typed
     },
     bio: {
       type: String,

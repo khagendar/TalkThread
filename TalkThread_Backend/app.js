@@ -10,7 +10,8 @@ const app = express();
 
 const PORT = 5000;
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors({
   origin: 'http://localhost:3000', // Frontend origin
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -21,8 +22,7 @@ app.use("/sign", route);
 app.use("/", BlockedRoute);
 app.use("/CreateProfile", CreateProfile); // Use the correct CreateProfile router
 
-app.use('/images', express.static("uploads"));
-
+app.use('/images', express.static(path.join(__dirname, 'uploads')));
 
 app.listen(PORT, () => {
   console.log("Server listening to the port:", PORT);

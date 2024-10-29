@@ -3,6 +3,7 @@ import axios from 'axios';
 import PropTypes from 'prop-types';
 import { Box, Stack, Typography, Avatar } from '@mui/material';
 import close from '../chatApplication/images/close.png'; // Ensure the path is correct
+import socket from '../socket';
 
 // Chat Account Component: Displays user details
 const ChatAccounts = ({ user, onClick }) => {
@@ -38,30 +39,20 @@ ChatAccounts.propTypes = {
 };
 
 // Fetch or create a new chat between sender and receiver
-const fetchOrCreateChat = async (senderId, receiverId) => {
+const fetchOrCreateChat = async (senderId, receiverId, fetchConversations) => {
   try {
-    // First, try to get the existing conversation
+    // Try to get the existing conversation
     const res = await axios.get(`http://localhost:5000/sign/conversation`, {
-      params: {
-        senderId,
-        receiverId,
-      },
+      params: { senderId, receiverId },
     });
-
-    console.log("res", res);
-
+    fetchConversations();
+    
     if (res.data) {
-      // Conversation exists, update the 'updatedAt' field by using the conversation ID
-      const updatedConversation = await axios.put(
-        `http://localhost:5000/sign/conversation/`, // Include the conversation ID in the URL
-        {
-            conversationId: res.data._id
-           
-        }
-      );
-
-      console.log("updated", updatedConversation.data); // Log the updated conversation
-      return updatedConversation.data; 
+      console.log("res.data",res.data._id);
+      const ConvUpdateDate= await axios.put(`http://localhost:5000/sign/UpdateConversationDate/${res.data._id}`);
+      console.log("updateddate",ConvUpdateDate);
+      
+      // return res.data;
     }
   } catch (error) {
     if (error.response && error.response.status === 404) {
@@ -70,16 +61,18 @@ const fetchOrCreateChat = async (senderId, receiverId) => {
         senderId,
         receiverId,
       });
-
-      return newConversation.data; // Return the new conversation
+      console.log("newcon",newConversation);
+      
+      fetchConversations(); // Fetch after creation
+      
+      return newConversation.data;
     } else {
       console.error('Error fetching or creating conversation:', error);
     }
   }
 };
 
-
-const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
+const SearchAndChat = ({ handleClose, CUser, onSelectChat, fetchConversations }) => {
   const [input, setInput] = useState("");
   const [results, setResults] = useState([]);
   const [filteredResults, setFilteredResults] = useState([]);
@@ -98,7 +91,6 @@ const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
   const handleInputChange = (event) => {
     const newValue = event.target.value;
     setInput(newValue);
-
     if (newValue) {
       const filtered = results.filter((user) =>
         user?.name.toLowerCase().includes(newValue.toLowerCase())
@@ -116,26 +108,17 @@ const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
 
   // Handle clicking on a user to start a chat
   const handleChatClick = async (receiverId) => {
+    if (receiverId === CUser._id) {
+      alert('Cannot start a conversation with yourself.');
+      return;
+    }
     try {
-      if (receiverId === CUser._id) {
-        alert('Cannot start a conversation with yourself.');
-        return; // Exit the function without doing anything
-      }
-      const conversation = await fetchOrCreateChat(CUser._id, receiverId);
-      
-      // Ensure the conversation is passed correctly
-      onSelectChat(conversation); // Pass the conversation directly
-      handleCloseSearch(); // Close the search component
+      const conversation = await fetchOrCreateChat(CUser._id, receiverId, fetchConversations);
+      onSelectChat(conversation);
+      handleClose(); // Close the search component directly
     } catch (error) {
       console.error('Error initiating chat:', error);
     }
-  };
-
-  // Reset the component state and close the search dialog
-  const handleCloseSearch = () => {
-    setInput("");            // Reset the input field
-    setFilteredResults([]);   // Clear the filtered results
-    handleClose();            // Close the dialog
   };
 
   return (
@@ -156,7 +139,7 @@ const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
       }}
     >
       <div
-      className='newChat'
+        className="newChat"
         style={{
           padding: "10px",
           display: "flex",
@@ -164,9 +147,7 @@ const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
           alignItems: "center",
         }}
       >
-        
         <Typography variant="h6">New Chat</Typography>
-
         <img
           src={close}
           alt="close"
@@ -196,15 +177,11 @@ const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
             overflowY: "auto",
             border: "1px solid #ddd",
             borderRadius: "4px",
-            
           }}
         >
           {filteredResults.length > 0 ? (
             filteredResults.map((user) => (
-              <div
-                key={user._id || user.name}
-                onClick={() => handleChatClick(user._id)}
-              >
+              <div key={user._id} onClick={() => handleChatClick(user._id)}>
                 <ChatAccounts user={user} />
               </div>
             ))
@@ -228,7 +205,8 @@ const SearchAndChat = ({ handleClose, CUser, onSelectChat }) => {
 SearchAndChat.propTypes = {
   handleClose: PropTypes.func.isRequired,
   CUser: PropTypes.object.isRequired,
-  onSelectChat: PropTypes.func.isRequired,  // To handle chat selection
+  onSelectChat: PropTypes.func.isRequired,
+  fetchConversations: PropTypes.func.isRequired,  // Added missing prop validation
 };
 
 export default SearchAndChat;

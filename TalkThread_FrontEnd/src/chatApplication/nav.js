@@ -9,7 +9,7 @@ import { CodeSimple, Gear } from '@phosphor-icons/react';
 import Group from './CreateGroup/Group';
 import { useAuth } from '../Routes/AuthContex';
 import { useNavigate } from 'react-router-dom';
-import { io } from "socket.io-client";
+import socket from '../socket';
 import axios from 'axios';
 import defaultImage from '../CreateUser/defaultImage.png';
 import luffy from '../Images/1729439948488-avatar.png';
@@ -21,12 +21,13 @@ const Chat = () => {
   const [openModal, setOpenModal] = useState(false); // State to control modal visibility
   const auth = useAuth();
   const navigate = useNavigate();
-  const socket = useRef();
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
         const response = await axios.get(`http://localhost:5000/CreateProfile/profile/${auth.user.email}`);
         setUserData(response.data);
+        console.log("userdata",userData);
       } catch (error) {
         console.error('Error fetching user profile:', error);
       }
@@ -60,7 +61,7 @@ const Chat = () => {
 
   const handleLogout = () => {
     console.log("Logging out...");
-    socket.current.emit("logout");
+    socket.emit("logout");
     auth.logout();
     navigate("/");
   };
@@ -113,19 +114,19 @@ const Chat = () => {
             </Stack>
           </Stack>
 
-          <Stack direction="column" alignItems="center" width="100%" my={-2}>
+          <Stack direction="column" alignItems="center" width="100%" my={1}>
             <IconButton
               aria-label="profile"
               size="large"
               onClick={(event) => handleButtonClick('profile', event)}
               sx={{
                 border: activeButton === 'profile' ? '2px solid black' : 'transparent',
-                transition: 'border 0.3s ease',
+                transition: 'border 0.1s ease',
               }}
             >
               <Avatar
                 src={userData?.userProfile?.profile 
-                    ? `http://localhost:5000/images/${userData.userProfile.profile}` 
+                    ?  `${userData.userProfile.profile}`
                     : defaultImage} 
                 alt={userData?userData.userProfile.username:"Profile"}
                 sx={{ cursor: 'pointer' }}
@@ -142,7 +143,7 @@ const Chat = () => {
               onClick={(event) => handleButtonClick('menu', event)}
               sx={{
                 border: activeButton === 'menu' ? '2px solid black' : 'transparent',
-                transition: 'border 0.3s ease',
+                transition: 'border 0.1s ease',
               }}
             >
               <img src={menuIcon} alt="menu" style={{ width: 30, height: 30, objectFit: 'contain' }} />

@@ -8,7 +8,7 @@ const Contact = React.memo(({ showInfo, setShowInfo, isBlocked,setIsBlocked, rec
   const [currentView, setCurrentView] = useState('details');
   const [receiverDetails, setReceiverDetails] = useState(null); // State to store receiver's details
   const contactRef = useRef(null); // Ref to track the contact box
-
+const [userData,setUserData]=useState(null);
   // Fetch receiver details when the receiver changes
   useEffect(() => {
     if (!receiver) return; // Do nothing if receiver is not provided
@@ -17,6 +17,7 @@ const Contact = React.memo(({ showInfo, setShowInfo, isBlocked,setIsBlocked, rec
       try {
         const response = await axios.get(`http://localhost:5000/sign/user/${receiver}`);
         setReceiverDetails(response.data); // Update state with receiver's details
+        console.log("receiverdata",receiverDetails);
       } catch (error) {
         console.error('Error fetching receiver details:', error);
       }
@@ -41,7 +42,22 @@ const Contact = React.memo(({ showInfo, setShowInfo, isBlocked,setIsBlocked, rec
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [setShowInfo]);
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+        try {
+            const response = await axios.get(`http://localhost:5000/CreateProfile/profile/${receiverDetails?.email}`);
+            // console.log(response);
+            setUserData(response.data);
+            // console.log("chatlistdataofres", response.data);
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+        }
+    };
 
+    if (receiverDetails?.email) {
+        fetchUserProfile();
+    }
+}, [receiverDetails?.email]);
   // If showInfo is false, don't render the Contact sidebar
   if (!showInfo) return null;
 
@@ -99,10 +115,10 @@ const Contact = React.memo(({ showInfo, setShowInfo, isBlocked,setIsBlocked, rec
         </Box>
 
         {/* Main Content Area */}
-        <Box sx={{ flexGrow: 1, backgroundColor: '#f0f0f0', padding: 2 }}>
+        <Box sx={{ maxWidth:'250px', backgroundColor: '#f0f0f0', padding: 2 }}>
           {/* Render Details component if currentView is 'details' */}
           {currentView === 'details' && (
-            <Details isBlocked={isBlocked} setIsBlocked={setIsBlocked} receiverDetails={receiverDetails} CurrentUser={CurrentUser} refreshConversation={refreshConversation} conversation={conversation} />
+            <Details isBlocked={isBlocked} setIsBlocked={setIsBlocked} receiverDetails={receiverDetails} CurrentUser={CurrentUser} refreshConversation={refreshConversation} conversation={conversation} userData={userData} />
           )}
         </Box>
       </Stack>

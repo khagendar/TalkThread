@@ -10,39 +10,69 @@ import { useAuth } from '../Routes/AuthContex'; // Ensure correct path
 import axios from 'axios';
 import SearchChat from './Search';
 import MessageConversation from'../chatApplication/chat'
-import { format } from 'timeago.js';
+import socket from '../socket';
+// import { format } from 'timeago.js';
 import './chatList.css';
+import formatDate from './conversation/dateformat';
 const ChatAccounts = ({ conversation, currentUser }) => {
   const [userDetails, setUserDetails] = useState([]); // Array to store user details
-  const [isLoading, setIsLoading] = useState(true);
+const [isLoading, setIsLoading] = useState(true);
+const [user, setUser] = useState(null);
+const [userData, setUserData] = useState(null);
 
-  useEffect(() => {
+useEffect(() => {
     const fetchUserDetails = async () => {
-      try {
-        const friendId = conversation.members.find(m => m !== currentUser._id);
+        try {
+            const friendId = conversation.members.find(m => m !== currentUser._id);
 
-        // Fetch user details by friend ID
-        const res = await axios.get(`http://localhost:5000/sign/user/${friendId}`);
-        const userData = res.data;
+            // Fetch user details by friend ID
+            const res = await axios.get(`http://localhost:5000/sign/user/${friendId}`);
+            const userData = res.data;
+            setUser(res.data);
+            // console.log("user",user);
 
-        // Store user details as an array and add the updated time from the conversation
-        const userArray = [{ ...userData, updatedAt: conversation.updatedAt }];
-        
-        setUserDetails(prevDetails => {
-          const newDetails = [...prevDetails, ...userArray];
-          // Sort the user details by `updatedAt` in ascending order (oldest first)
-          return newDetails.sort((a, b) => new Date(a.updatedAt) - new Date(b.updatedAt));
-        });
-        
-      } catch (error) {
-        console.error("Error fetching user details:", error);
-      } finally {
-        setIsLoading(false);
-      }
+            // Avoid duplicates by checking if the user already exists in `userDetails`
+            setUserDetails(prevDetails => {
+                // Check if user already exists
+                const exists = prevDetails.some(detail => detail?._id === userData?._id);
+                if (exists) {
+                    return prevDetails; // No duplicate, return existing array
+                }
+
+                // Otherwise, add new user with `updatedAt` field
+                const userArray = [{ ...userData, updatedAt: conversation.updatedAt }];
+                const newDetails = [...prevDetails, ...userArray];
+
+                // Sort by `updatedAt` in ascending order
+                return newDetails.sort((a, b) => new Date(a.updatedAt) - new Date(b.updatedAt));
+            });
+        } catch (error) {
+            console.error("Error fetching user details:", error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     fetchUserDetails();
-  }, [conversation, currentUser]);  // Re-run when `conversation` or `currentUser` changes
+}, [conversation, currentUser._id]);
+
+useEffect(() => {
+    const fetchUserProfile = async () => {
+        try {
+            const response = await axios.get(`http://localhost:5000/CreateProfile/profile/${user?.email}`);
+            // console.log(response);
+            setUserData(response.data);
+            // console.log("chatlistdataofres", response.data);
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+        }
+    };
+
+    if (user?.email) {
+        fetchUserProfile();
+    }
+}, [user?.email]);
+
 
   if (isLoading) {
     return <Typography>Loading...</Typography>; // Show loading state
@@ -64,23 +94,23 @@ const ChatAccounts = ({ conversation, currentUser }) => {
           <Badge
             
           >
-            <Avatar src={faker.image.avatar()} sx={{ cursor: 'pointer' }} />
+            <Avatar src={userData?.userProfile?.profile} sx={{ cursor: 'pointer' }} />
           </Badge>
           <Stack spacing={0.3}>
             <Typography variant="subtitle2">
               {userDetails.length > 0 ? userDetails[0].name : 'Khagendar'}
             </Typography>
             <Typography variant="caption">
-              {conversation.latestMessage || 'What are you doing?'}
+              {userData?.userProfile?.username || 'What are you doing?'}
             </Typography>
           </Stack>
         </Stack>
         <Stack spacing={2} alignItems="center">
           <Typography sx={{ fontWeight: '600' }} variant="caption">
-          {format(conversation.updatedAt)}
+          {formatDate(conversation.updatedAt)}
 
           </Typography>
-          <Badge color="primary" badgeContent={conversation.unread || 2} />
+          {/* <Badge color="primary" badgeContent={conversation.unread || 2} /> */}
         </Stack>
       </Stack>
     </Box>
@@ -167,9 +197,9 @@ export default function ChatList() {
   const [openDialog, setOpenDialog] = useState(false);
   const [conversation, setConversation] = useState([]);  // All conversations
   const [currentChat, setCurrentChat] = useState(null);
-
+  const [unreadCount, setUnreadCount] = useState(0);
   const { user } = useAuth();
-  console.log("user",user);
+  // console.log("user",user);
   const [open, setOpen] = useState(true);
 
   // Reset and re-open search chat
@@ -186,13 +216,13 @@ export default function ChatList() {
 
   const handleChatSelect = (chat) => {
     setCurrentChat(chat);
-    setOpen(true);
+    // setOpen(true);
     setCurrentChat(currentChat);
   };
   
   const fetchConversations = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/sign/conversation/${user._id}`);
+      const res = await axios.get(`http://localhost:5000/sign/conversation/${user?._id}`);
       setConversation(res.data);
     } catch (error) {
       console.error("Error fetching conversations:", error.response || error.message);
@@ -204,6 +234,31 @@ export default function ChatList() {
     if (user._id) fetchConversations();
   }, [user._id]);
 
+  useEffect(() => {
+    const handleConversationUpdate = (data) => {
+      // console.log("chatlist",data);
+        fetchConversations();
+    };
+
+    socket.on('conversationUpdated', handleConversationUpdate);
+
+    // Clean up listener on unmount
+    return () => {
+      socket.off('conversationUpdated', handleConversationUpdate);
+    };
+  }, [ user?._id]);
+  // useEffect(() => {
+  //   const getNewConversation = (conversationId) => {
+  //     console.log("receiverId",conversationId);
+  //      fetchConversations();
+  //   };
+  
+  //   socket.on("getNewConversation", getNewConversation);
+  //   return () => {
+  //       socket.off("getNewConversation", getNewConversation);
+  //   };
+  // }, [fetchConversations]);
+// 
   return (
     <>
       <Stack direction="row">
@@ -290,6 +345,7 @@ export default function ChatList() {
               handleChatSelect(newChat);
               fetchConversations(); 
             }}
+            fetchConversations={fetchConversations}
           />
           )}
         </Box>

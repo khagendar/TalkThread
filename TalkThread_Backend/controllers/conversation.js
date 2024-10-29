@@ -103,6 +103,27 @@ async updateConversation(req, res) {
     res.status(500).json({ message: "Error updating conversation", error });
   }
 }
+async updateConversationDate(req, res) {
+  const { conversationId } = req.params;
+  //  console.log(req.params);
+  //  console.log(conversationId);
+  try {
+    // Update the `updatedAt` field to the current date and return the updated document
+    const updatedConversation = await ConversationModel.findByIdAndUpdate(
+      conversationId,
+      { updatedAt: Date.now() },
+      { new: true } // Returns the updated document
+    );
 
+    if (!updatedConversation) {
+      return res.status(404).json({ message: "Conversation not found" });
+    }
+
+    res.status(200).json(updatedConversation);
+  } catch (error) {
+    console.error("Error updating conversation date:", error);
+    res.status(500).json({ message: "Server error", error });
+  }
+}
 }
 module.exports = new ConversationController();
